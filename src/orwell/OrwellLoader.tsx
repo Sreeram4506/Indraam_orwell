@@ -128,7 +128,7 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
       const animateIn = () => {
         setNumber(String(num));
         requestAnimationFrame(() => {
-          const spans = el.querySelectorAll('span');
+          const spans = Array.from(el.querySelectorAll('span'));
           gsap.set(spans, { clipPath: 'inset(100% 0 0% 0)', y: 60 });
           gsap.to(spans, {
             clipPath: 'inset(0% 0 0% 0)',
@@ -143,7 +143,7 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
 
       const existing = el.querySelectorAll('span');
       if (existing.length > 0) {
-        gsap.to(existing, {
+        gsap.to(Array.from(existing), {
           clipPath: 'inset(0 0 100% 0)',
           y: -40,
           duration: 0.4,

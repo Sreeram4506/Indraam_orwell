@@ -31,6 +31,7 @@ type ScrollRefs = {
 
 type ScrollCallbacks = {
   onS6Active: (active: boolean) => void;
+  onS6Velocity: (velocity: number) => void;
   onGrainOpacity: (opacity: number) => void;
   onHeroVisible: (visible: boolean) => void;
 };
@@ -41,7 +42,7 @@ export function useOrwellScroll(
   callbacks: ScrollCallbacks,
 ) {
   const { hero, s2, s3, s4, s6, s7, s8, s9 } = refs;
-  const { onS6Active, onGrainOpacity, onHeroVisible } = callbacks;
+  const { onS6Active, onS6Velocity, onGrainOpacity, onHeroVisible } = callbacks;
 
   const stateRef = useRef({
     section2Shown: false,
@@ -94,6 +95,7 @@ export function useOrwellScroll(
         state.s6Velocity = Math.min(Math.abs(window.scrollY - state.s6LastScrollY) / 20, 3);
       }
       state.s6LastScrollY = window.scrollY;
+      onS6Velocity(state.s6Velocity);
 
       const canvas = hero.current?.canvas ?? null;
       const s2Handle = s2.current;
@@ -357,7 +359,7 @@ export function useOrwellScroll(
       window.removeEventListener('scroll', onScroll);
       document.body.style.height = '';
     };
-  }, [enabled, hero, s2, s3, s4, s6, s7, s8, s9, onGrainOpacity, onHeroVisible, onS6Active]);
+  }, [enabled, hero, s2, s3, s4, s6, s7, s8, s9, onGrainOpacity, onHeroVisible, onS6Active, onS6Velocity]);
 }
 
 export function useS6Velocity(enabled: boolean) {

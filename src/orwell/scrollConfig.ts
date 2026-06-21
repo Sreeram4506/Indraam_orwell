@@ -19,17 +19,17 @@ export type ScrollBounds = {
 export function getScrollBounds(mobile = isMobileViewport()): ScrollBounds {
   if (mobile) {
     return {
-      bodyVh: 1450,
+      bodyVh: 1220,
       boundary12: 0.11,
       boundary23: 0.18,
       boundary34: 0.27,
-      boundary46: 0.35,
-      boundary67: 0.48,
-      boundary78: 0.86,
-      boundary89: 0.92,
-      reverseS7: 0.43,
-      reverseS8: 0.82,
-      reverseS9: 0.89,
+      boundary46: 0.34,
+      boundary67: 0.42,
+      boundary78: 0.76,
+      boundary89: 0.86,
+      reverseS7: 0.37,
+      reverseS8: 0.72,
+      reverseS9: 0.82,
     };
   }
 

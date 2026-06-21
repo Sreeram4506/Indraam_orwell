@@ -23,7 +23,8 @@ export default function OrwellApp() {
   const [heroVisible, setHeroVisible] = useState(true);
   const [s6Active, setS6Active] = useState(false);
   const [s6Tilt] = useState({ x: 0, z: 0 });
-  const [scrollSpacerVh, setScrollSpacerVh] = useState(() => getScrollBounds().bodyVh);
+  const [s6Velocity, setS6Velocity] = useState(0);
+  const [scrollSpacerVh, setScrollSpacerVh] = useState(() => getScrollBounds(isMobileViewport()).bodyVh);
 
   const handResolveRef = useRef<() => void>(() => {});
   const handLoadPromise = useMemo(
@@ -61,6 +62,7 @@ export default function OrwellApp() {
   const scrollCallbacks = useMemo(
     () => ({
       onS6Active: (active: boolean) => setS6Active(active),
+      onS6Velocity: setS6Velocity,
       onGrainOpacity: setGrainOpacity,
       onHeroVisible: setHeroVisible,
     }),
@@ -126,7 +128,7 @@ export default function OrwellApp() {
       <Section6
         ref={s6Ref}
         active={s6Active}
-        velocity={0}
+        velocity={s6Velocity}
         tiltX={s6Tilt.x}
         tiltZ={s6Tilt.z}
       />

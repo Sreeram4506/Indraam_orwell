@@ -18,6 +18,7 @@ const Section8 = forwardRef<Section8Handle>(function Section8(_, ref) {
   const animate = () => {
     const quoteEl = quoteRef.current;
     if (!quoteEl) return;
+    const mobile = window.innerWidth <= 768;
 
     gsap.set([authorRef.current, holmRef.current, urlRef.current], { opacity: 0 });
     gsap.set(dividerRef.current, { width: '0px' });
@@ -44,20 +45,20 @@ const Section8 = forwardRef<Section8Handle>(function Section8(_, ref) {
 
     gsap
       .timeline()
-      .to({}, { duration: 0.4 })
+      .to({}, { duration: mobile ? 0.18 : 0.4 })
       .to(chars, {
         opacity: 1,
         y: 0,
         rotationX: 0,
-        duration: 1.4,
-        stagger: { amount: 2.2, from: 'start' },
+        duration: mobile ? 0.95 : 1.4,
+        stagger: { amount: mobile ? 1.2 : 2.2, from: 'start' },
         ease: 'power4.out',
       })
-      .to(authorRef.current, { opacity: 1, duration: 1.8, ease: 'power2.out' }, '-=0.4')
-      .to(dividerRef.current, { width: '200px', duration: 1.6, ease: 'expo.inOut' }, '+=0.6')
-      .to(holmRef.current, { opacity: 1, duration: 1.2, ease: 'power2.out' }, '+=0.2')
-      .to(urlRef.current, { opacity: 1, duration: 1, ease: 'power2.out' }, '+=0.2')
-      .to(hint, { opacity: 1, duration: 0.8, ease: 'power2.out' }, '+=0.3');
+      .to(authorRef.current, { opacity: 1, duration: mobile ? 1.1 : 1.8, ease: 'power2.out' }, mobile ? '-=0.7' : '-=0.4')
+      .to(dividerRef.current, { width: mobile ? '144px' : '200px', duration: mobile ? 1.05 : 1.6, ease: 'expo.inOut' }, '+=0.4')
+      .to(holmRef.current, { opacity: 1, duration: mobile ? 0.8 : 1.2, ease: 'power2.out' }, '+=0.16')
+      .to(urlRef.current, { opacity: 1, duration: mobile ? 0.75 : 1, ease: 'power2.out' }, '+=0.16')
+      .to(hint, { opacity: 1, duration: mobile ? 0.55 : 0.8, ease: 'power2.out' }, '+=0.2');
   };
 
   useImperativeHandle(ref, () => ({

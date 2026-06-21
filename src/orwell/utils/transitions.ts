@@ -178,6 +178,12 @@ export function mobileTransition(onMidpoint: () => void) {
 }
 
 export function curtainTransition(onMidpoint: () => void, lenis?: { stop: () => void; start: () => void }) {
+  const isMobile = window.innerWidth <= 768 || window.matchMedia('(pointer: coarse)').matches;
+  if (isMobile) {
+    mobileTransition(onMidpoint);
+    return;
+  }
+
   lenis?.stop();
   document.addEventListener('touchmove', preventTouch, { passive: false });
   const overlay = document.createElement('div');
