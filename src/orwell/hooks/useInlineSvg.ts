@@ -16,12 +16,14 @@ export function useInlineSvg(url: string) {
         const svgEl = containerRef.current.querySelector('svg');
         if (!svgEl) return;
 
-        // Normalize width/height so inline SVG markup like height="auto" doesn't break.
+        // Normalize inline SVG sizing so markup like height="auto" doesn't break.
         svgEl.setAttribute('width', svgEl.getAttribute('width') || '100%');
 
         const height = svgEl.getAttribute('height');
+        // If the SVG uses height="auto" (or has no height), removing the attribute avoids
+        // invalid attribute value errors and lets CSS control sizing.
         if (!height || height === 'auto') {
-          svgEl.setAttribute('height', '100%');
+          svgEl.removeAttribute('height');
         }
 
         svgEl.style.display = 'block';

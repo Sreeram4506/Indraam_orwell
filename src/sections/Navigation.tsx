@@ -27,11 +27,14 @@ export default function Navigation({ navSolid, menuOpen, setMenuOpen, introDone 
   useEffect(() => {
     if (menuOpen && overlayRef.current && linksRef.current) {
       gsap.to(overlayRef.current, { opacity: 1, duration: 0.35, ease: 'power2.out' });
-      gsap.fromTo(
-        linksRef.current.children,
-        { y: 32, opacity: 0, scale: 0.95 },
-        { y: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.08, ease: 'back.out(1.6)', delay: 0.08 }
-      );
+      const children = Array.from(linksRef.current.children);
+      if (children.length > 0) {
+        gsap.fromTo(
+          children,
+          { y: 32, opacity: 0, scale: 0.95 },
+          { y: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.08, ease: 'back.out(1.6)', delay: 0.08 }
+        );
+      }
     } else if (!menuOpen && overlayRef.current) {
       gsap.to(overlayRef.current, { opacity: 0, duration: 0.25, ease: 'power2.in' });
     }

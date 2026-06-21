@@ -338,6 +338,29 @@ export function useOrwellScroll(
       bounds.boundary89 + 0.01,
     ];
 
+    // When navigating via hash (e.g. #contact), the swipe-snap system can fight the target scroll.
+    // Temporarily suspend snap behavior while we perform a deterministic jump to the element.
+    let ignoreSnapUntil = 0;
+
+    const jumpToContactIfNeeded = () => {
+      if (window.location.hash !== '#contact') return;
+      const el = document.getElementById('contact');
+      if (!el) return;
+
+      ignoreSnapUntil = Date.now() + 900;
+
+      const rect = el.getBoundingClientRect();
+      const top = rect.top + window.scrollY;
+
+      // Account for fixed nav height (~56-64px).
+      const headerOffset = 72;
+      const nextTop = Math.max(0, Math.round(top - headerOffset));
+      window.scrollTo({ top: nextTop, behavior: 'auto' });
+
+      // Keep internal state in sync with the actual scroll position.
+      onScroll();
+    };
+
     const maxScroll = () => document.documentElement.scrollHeight - window.innerHeight;
 
     const smoothScrollToTop = (targetTop: number, durationMs = 260) => {
@@ -395,12 +418,20 @@ export function useOrwellScroll(
 
     const onTouchMove = (e: TouchEvent) => {
       if (!snapArmed) return;
-      e.preventDefault();
+
+      // If we just jumped to #contact, don't immediately trigger/snap further.
+      if (Date.now() < ignoreSnapUntil) return;
+
+      // Some events are not cancelable (e.g. browser reports scrolling in progress),
+      // so guard to avoid "cancelable=false" warnings.
+      if (e.cancelable) e.preventDefault();
     };
 
     const onTouchEnd = (e: TouchEvent) => {
       if (!snapArmed) return;
       if (isTransitionLocked()) return;
+
+      if (Date.now() < ignoreSnapUntil) return;
 
       const t = e.changedTouches[0];
       const dy = t.clientY - touchStartY;
@@ -424,6 +455,11 @@ export function useOrwellScroll(
 
     // Initialize to current scroll position (first call).
     onScroll();
+
+    // If the user arrived/changed hash to #contact, jump now.
+    // Use a microtask + timer to ensure Contact section is mounted.
+    jumpToContactIfNeeded();
+    setTimeout(jumpToContactIfNeeded, 0);
 
     return () => {
       window.removeEventListener('touchstart', onTouchStart as any);
