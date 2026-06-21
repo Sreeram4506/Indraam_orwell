@@ -340,6 +340,35 @@ export function useOrwellScroll(
 
     const maxScroll = () => document.documentElement.scrollHeight - window.innerHeight;
 
+    const smoothScrollToTop = (targetTop: number, durationMs = 260) => {
+      const startTop = window.scrollY;
+      const diff = targetTop - startTop;
+      if (Math.abs(diff) < 2) {
+        window.scrollTo({ top: targetTop, behavior: 'auto' });
+        return;
+      }
+
+      const start = performance.now();
+      const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+      const step = (now: number) => {
+        const elapsed = now - start;
+        const t = Math.min(1, elapsed / durationMs);
+        const eased = easeOutCubic(t);
+        const nextTop = Math.round(startTop + diff * eased);
+
+        window.scrollTo({ top: nextTop, behavior: 'auto' });
+
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          onScroll();
+        }
+      };
+
+      requestAnimationFrame(step);
+    };
+
     const setByIndex = (idx: number) => {
       const clamped = Math.max(0, Math.min(targetsProgress.length - 1, idx));
       currentSectionIndex = clamped;
@@ -350,8 +379,7 @@ export function useOrwellScroll(
       const targetP = targetsProgress[clamped] ?? 0;
       const top = Math.round(Math.max(0, Math.min(1, targetP)) * m);
 
-      window.scrollTo({ top, behavior: 'auto' });
-      onScroll();
+      smoothScrollToTop(top);
     };
 
     let touchStartY = 0;
