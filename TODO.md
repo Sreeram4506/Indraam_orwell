@@ -1,0 +1,3 @@
+- [ ] Restore src/App.tsx to render the full marketing/original site layout (Navigation, Hero, OurApproach, Capabilities, ProductFeatures, ProductPlatform, ProductStatistics, Statistics, VideoShowcase, CaseStudies, Testimonials, FAQ, Integrations, NeuralEngines, Newsletter, Footer) instead of OrwellApp
+- [ ] Restore src/sections/Statistics.tsx (currently returns null) to a real visible section with id="work"
+- [ ] Verify by running the dev server and checking scroll anchors (#home, #work, #contact) and that the page renders all sections
