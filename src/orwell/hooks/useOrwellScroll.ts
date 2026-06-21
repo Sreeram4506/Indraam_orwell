@@ -324,30 +324,17 @@ export function useOrwellScroll(
       };
     }
 
-    // Mobile swipe-to-snap: disable free touch scrolling and use swipes to jump between section boundaries.
-    let currentSectionIndex = 0; // 0=hero,1=s2,2=s3,3=s4,4=s6,5=s7,6=s8,7=s9
+    // Mobile: keep normal continuous scrolling (no swipe-to-snap).
+    // Still run transitions on scroll so section animations respond as the user scrolls.
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
 
-    const targetsProgress = [
-      0,
-      bounds.boundary12 + 0.01,
-      bounds.boundary23 + 0.01,
-      bounds.boundary34 + 0.01,
-      bounds.boundary46 + 0.01,
-      bounds.boundary67 + 0.01,
-      bounds.boundary78 + 0.01,
-      bounds.boundary89 + 0.01,
-    ];
-
-    // When navigating via hash (e.g. #contact), the swipe-snap system can fight the target scroll.
-    // Temporarily suspend snap behavior while we perform a deterministic jump to the element.
-    let ignoreSnapUntil = 0;
-
+    // When navigating via hash (e.g. #contact), perform a deterministic jump to the element.
+    // This should not fight any snap system (since snap is disabled on mobile now).
     const jumpToContactIfNeeded = () => {
       if (window.location.hash !== '#contact') return;
       const el = document.getElementById('contact');
       if (!el) return;
-
-      ignoreSnapUntil = Date.now() + 900;
 
       const rect = el.getBoundingClientRect();
       const top = rect.top + window.scrollY;
@@ -361,110 +348,12 @@ export function useOrwellScroll(
       onScroll();
     };
 
-    const maxScroll = () => document.documentElement.scrollHeight - window.innerHeight;
-
-    const smoothScrollToTop = (targetTop: number, durationMs = 260) => {
-      const startTop = window.scrollY;
-      const diff = targetTop - startTop;
-      if (Math.abs(diff) < 2) {
-        window.scrollTo({ top: targetTop, behavior: 'auto' });
-        return;
-      }
-
-      const start = performance.now();
-      const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-      const step = (now: number) => {
-        const elapsed = now - start;
-        const t = Math.min(1, elapsed / durationMs);
-        const eased = easeOutCubic(t);
-        const nextTop = Math.round(startTop + diff * eased);
-
-        window.scrollTo({ top: nextTop, behavior: 'auto' });
-
-        if (t < 1) {
-          requestAnimationFrame(step);
-        } else {
-          onScroll();
-        }
-      };
-
-      requestAnimationFrame(step);
-    };
-
-    const setByIndex = (idx: number) => {
-      const clamped = Math.max(0, Math.min(targetsProgress.length - 1, idx));
-      currentSectionIndex = clamped;
-
-      const m = maxScroll();
-      if (m <= 0) return;
-
-      const targetP = targetsProgress[clamped] ?? 0;
-      const top = Math.round(Math.max(0, Math.min(1, targetP)) * m);
-
-      smoothScrollToTop(top);
-    };
-
-    let touchStartY = 0;
-    let touchStartX = 0;
-    let snapArmed = true;
-
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return;
-      snapArmed = true;
-      touchStartY = e.touches[0].clientY;
-      touchStartX = e.touches[0].clientX;
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!snapArmed) return;
-
-      // If we just jumped to #contact, don't immediately trigger/snap further.
-      if (Date.now() < ignoreSnapUntil) return;
-
-      // Some events are not cancelable (e.g. browser reports scrolling in progress),
-      // so guard to avoid "cancelable=false" warnings.
-      if (e.cancelable) e.preventDefault();
-    };
-
-    const onTouchEnd = (e: TouchEvent) => {
-      if (!snapArmed) return;
-      if (isTransitionLocked()) return;
-
-      if (Date.now() < ignoreSnapUntil) return;
-
-      const t = e.changedTouches[0];
-      const dy = t.clientY - touchStartY;
-      const dx = t.clientX - touchStartX;
-
-      if (Math.abs(dx) > Math.abs(dy)) return; // ignore horizontal
-
-      const threshold = 45;
-      if (Math.abs(dy) < threshold) return;
-
-      snapArmed = false;
-
-      if (dy < 0) setByIndex(currentSectionIndex + 1);
-      else setByIndex(currentSectionIndex - 1);
-    };
-
-    const opts = { passive: false } as AddEventListenerOptions;
-    window.addEventListener('touchstart', onTouchStart, opts);
-    window.addEventListener('touchmove', onTouchMove, opts);
-    window.addEventListener('touchend', onTouchEnd, opts);
-
-    // Initialize to current scroll position (first call).
-    onScroll();
-
-    // If the user arrived/changed hash to #contact, jump now.
     // Use a microtask + timer to ensure Contact section is mounted.
     jumpToContactIfNeeded();
     setTimeout(jumpToContactIfNeeded, 0);
 
     return () => {
-      window.removeEventListener('touchstart', onTouchStart as any);
-      window.removeEventListener('touchmove', onTouchMove as any);
-      window.removeEventListener('touchend', onTouchEnd as any);
+      window.removeEventListener('scroll', onScroll);
       document.body.style.height = '';
     };
   }, [enabled, hero, s2, s3, s4, s6, s7, s8, s9, onGrainOpacity, onHeroVisible, onS6Active]);
