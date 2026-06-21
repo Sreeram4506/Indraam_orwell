@@ -63,7 +63,8 @@ export function useOrwellScroll(
 
     const isMobile = isMobileViewport();
     const bounds = getScrollBounds(isMobile);
-    document.body.style.height = `${bounds.bodyVh}vh`;
+    // On mobile we removed swipe-to-snap, so keep native/continuous scrolling.
+    // Do not force an artificial body height.
 
     const show = (el: HTMLElement | null) => {
       if (!el) return;
