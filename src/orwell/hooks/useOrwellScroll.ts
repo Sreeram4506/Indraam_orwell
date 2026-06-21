@@ -42,6 +42,7 @@ export function useOrwellScroll(
 ) {
   const { hero, s2, s3, s4, s6, s7, s8, s9 } = refs;
   const { onS6Active, onGrainOpacity, onHeroVisible } = callbacks;
+
   const stateRef = useRef({
     section2Shown: false,
     section3Shown: false,
@@ -54,6 +55,7 @@ export function useOrwellScroll(
     s6LastScrollY: 0,
     s6Velocity: 0,
   });
+
   const lenisRef = useRef<Lenis | null>(null);
 
   useEffect(() => {
@@ -63,28 +65,23 @@ export function useOrwellScroll(
     const bounds = getScrollBounds(isMobile);
     document.body.style.height = `${bounds.bodyVh}vh`;
 
-    const lenis = new Lenis({ lerp: isMobile ? 0.12 : 0.1 });
-    lenisRef.current = lenis;
-
-    const raf = (time: number) => {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    };
-    requestAnimationFrame(raf);
-
-    const lenisApi = { stop: () => lenis.stop(), start: () => lenis.start() };
-
     const show = (el: HTMLElement | null) => {
       if (!el) return;
       el.style.opacity = '1';
       el.style.pointerEvents = 'auto';
       el.style.visibility = 'visible';
     };
+
     const hide = (el: HTMLElement | null) => {
       if (!el) return;
       el.style.opacity = '0';
       el.style.pointerEvents = 'none';
       el.style.visibility = 'hidden';
+    };
+
+    const lenisApi = {
+      stop: () => lenisRef.current?.stop(),
+      start: () => lenisRef.current?.start(),
     };
 
     const onScroll = () => {
@@ -306,12 +303,104 @@ export function useOrwellScroll(
       }
     };
 
-    window.addEventListener('scroll', onScroll, { passive: true });
+    if (!isMobile) {
+      const lenis = new Lenis({ lerp: 0.1 });
+      lenisRef.current = lenis;
+
+      const raf = (time: number) => {
+        lenis.raf(time);
+        requestAnimationFrame(raf);
+      };
+      requestAnimationFrame(raf);
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      return () => {
+        window.removeEventListener('scroll', onScroll);
+        lenis.destroy();
+        lenisRef.current = null;
+        document.body.style.height = '';
+      };
+    }
+
+    // Mobile swipe-to-snap: disable free touch scrolling and use swipes to jump between section boundaries.
+    let currentSectionIndex = 0; // 0=hero,1=s2,2=s3,3=s4,4=s6,5=s7,6=s8,7=s9
+
+    const targetsProgress = [
+      0,
+      bounds.boundary12 + 0.01,
+      bounds.boundary23 + 0.01,
+      bounds.boundary34 + 0.01,
+      bounds.boundary46 + 0.01,
+      bounds.boundary67 + 0.01,
+      bounds.boundary78 + 0.01,
+      bounds.boundary89 + 0.01,
+    ];
+
+    const maxScroll = () => document.documentElement.scrollHeight - window.innerHeight;
+
+    const setByIndex = (idx: number) => {
+      const clamped = Math.max(0, Math.min(targetsProgress.length - 1, idx));
+      currentSectionIndex = clamped;
+
+      const m = maxScroll();
+      if (m <= 0) return;
+
+      const targetP = targetsProgress[clamped] ?? 0;
+      const top = Math.round(Math.max(0, Math.min(1, targetP)) * m);
+
+      window.scrollTo({ top, behavior: 'auto' });
+      onScroll();
+    };
+
+    let touchStartY = 0;
+    let touchStartX = 0;
+    let snapArmed = true;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      snapArmed = true;
+      touchStartY = e.touches[0].clientY;
+      touchStartX = e.touches[0].clientX;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!snapArmed) return;
+      e.preventDefault();
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!snapArmed) return;
+      if (isTransitionLocked()) return;
+
+      const t = e.changedTouches[0];
+      const dy = t.clientY - touchStartY;
+      const dx = t.clientX - touchStartX;
+
+      if (Math.abs(dx) > Math.abs(dy)) return; // ignore horizontal
+
+      const threshold = 45;
+      if (Math.abs(dy) < threshold) return;
+
+      snapArmed = false;
+
+      if (dy < 0) setByIndex(currentSectionIndex + 1);
+      else setByIndex(currentSectionIndex - 1);
+    };
+
+    const opts = { passive: false } as AddEventListenerOptions;
+    window.addEventListener('touchstart', onTouchStart, opts);
+    window.addEventListener('touchmove', onTouchMove, opts);
+    window.addEventListener('touchend', onTouchEnd, opts);
+
+    // Initialize to current scroll position (first call).
     onScroll();
 
     return () => {
-      window.removeEventListener('scroll', onScroll);
-      lenis.destroy();
+      window.removeEventListener('touchstart', onTouchStart as any);
+      window.removeEventListener('touchmove', onTouchMove as any);
+      window.removeEventListener('touchend', onTouchEnd as any);
       document.body.style.height = '';
     };
   }, [enabled, hero, s2, s3, s4, s6, s7, s8, s9, onGrainOpacity, onHeroVisible, onS6Active]);
