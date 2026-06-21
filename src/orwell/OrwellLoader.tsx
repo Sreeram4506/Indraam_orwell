@@ -22,16 +22,18 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
     const isMob = window.innerWidth <= 768;
     let numIndex = 0;
 
-    const tryHide = () => {
-      if (!animDoneRef.current || hidingRef.current) return;
-      hidingRef.current = true;
-      const timeout = new Promise<void>((r) => window.setTimeout(r, 5000));
-      Promise.race([handLoadPromise, timeout]).then(doHide);
-    };
+    const HARD_TIMEOUT_MS = 7000;
 
     const doHide = () => {
       const loaderEl = rootRef.current;
-      if (!loaderEl) return;
+      // Always restore overflow even if UI elements can't be found.
+      document.body.style.overflow = '';
+
+      if (!loaderEl) {
+        onHidden();
+        return;
+      }
+
       const W = window.innerWidth;
       const H = window.innerHeight;
       const glitch = document.createElement('canvas');
@@ -40,16 +42,20 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
       glitch.width = W;
       glitch.height = H;
       document.body.appendChild(glitch);
+
       const ctx = glitch.getContext('2d');
       if (!ctx) {
         loaderEl.style.display = 'none';
-        document.body.style.overflow = '';
         onHidden();
         return;
       }
 
       const start = Date.now();
       const DURATION = 620;
+
+      // Allow touch scrolling while the glitch fade runs
+      // (loader stays visually, but doesn't block scrolling).
+      loaderEl.style.pointerEvents = 'none';
 
       const frame = () => {
         const t = Math.min(1, (Date.now() - start) / DURATION);
@@ -87,13 +93,31 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
           window.setTimeout(() => {
             glitch.remove();
             loaderEl.style.display = 'none';
-            document.body.style.overflow = '';
             onHidden();
           }, 55);
         }
       };
       frame();
     };
+
+    const tryHide = () => {
+      if (!animDoneRef.current || hidingRef.current) return;
+      hidingRef.current = true;
+
+      const timeout = new Promise<void>((r) => window.setTimeout(r, 5000));
+      Promise.race([handLoadPromise, timeout]).then(() => {
+        // If hand load resolves late, we still hide.
+        if (!hidingRef.current) return;
+        doHide();
+      });
+    };
+
+    // Hard cap: if hand model never resolves on mobile, still unlock scroll.
+    window.setTimeout(() => {
+      if (hidingRef.current) return;
+      hidingRef.current = true;
+      doHide();
+    }, HARD_TIMEOUT_MS);
 
     const showNumber = (num: number, callback: () => void) => {
       const el = numberRef.current;
