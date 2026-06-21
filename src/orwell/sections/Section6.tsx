@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import gsap from 'gsap';
 import BookScene from '../BookScene';
 import { S6_LEFT_TEXT, S6_RIGHT_TEXT, S6_THOUGHTCRIME } from '../data';
+import { isMobileViewport } from '../scrollConfig';
 
 export type Section6Handle = {
   el: HTMLElement | null;
@@ -59,18 +60,19 @@ const Section6 = forwardRef<Section6Handle, Section6Props>(function Section6(
   };
 
   const showThoughtcrime = () => {
+    const mobile = isMobileViewport();
     window.setTimeout(() => {
       if (!thoughtcrimeRef.current) return;
       gsap.to(thoughtcrimeRef.current, {
         opacity: 1,
-        duration: 0.5,
+        duration: mobile ? 0.3 : 0.5,
         onComplete: () => {
           window.setTimeout(() => {
-            if (thoughtcrimeRef.current) gsap.to(thoughtcrimeRef.current, { opacity: 0, duration: 0.5 });
-          }, 3000);
+            if (thoughtcrimeRef.current) gsap.to(thoughtcrimeRef.current, { opacity: 0, duration: mobile ? 0.3 : 0.5 });
+          }, mobile ? 1800 : 3000);
         },
       });
-    }, 8000);
+    }, mobile ? 3600 : 8000);
   };
 
   useImperativeHandle(ref, () => ({
@@ -82,19 +84,20 @@ const Section6 = forwardRef<Section6Handle, Section6Props>(function Section6(
 
   useEffect(() => {
     if (!active) return;
+    const mobile = isMobileViewport();
     let raf = 0;
     const tick = () => {
-      const speed = 1.2 + velocityRef.current * 4;
-      velocityRef.current *= 0.9;
+      const speed = (mobile ? 2.4 : 1.2) + velocityRef.current * (mobile ? 6.5 : 4);
+      velocityRef.current *= mobile ? 0.82 : 0.9;
       leftYRef.current += speed;
       if (leftLoopRef.current > 0 && leftYRef.current >= leftLoopRef.current) {
         leftYRef.current -= leftLoopRef.current;
       }
-      rightYRef.current += speed * 0.6;
+      rightYRef.current += speed * (mobile ? 0.75 : 0.6);
       if (rightLoopRef.current > 0 && rightYRef.current >= rightLoopRef.current) {
         rightYRef.current -= rightLoopRef.current;
       }
-      const blur = Math.min(velocityRef.current * 1.8, 3.5);
+      const blur = Math.min(velocityRef.current * (mobile ? 1.3 : 1.8), mobile ? 2.4 : 3.5);
       if (leftRef.current) {
         leftRef.current.style.filter = blur > 0.1 ? `blur(${blur}px)` : '';
         leftRef.current.style.transform = `translateY(-${leftYRef.current}px)`;
