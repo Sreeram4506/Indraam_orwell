@@ -13,7 +13,8 @@ export function useInlineSvg(url: string) {
           const svgEl = containerRef.current.querySelector('svg');
           if (svgEl) {
             svgEl.setAttribute('width', '100%');
-            svgEl.setAttribute('height', 'auto');
+            // SVG attributes must be valid lengths/percent; "auto" is invalid for the SVG height attribute.
+            svgEl.setAttribute('height', '100%');
             svgEl.style.display = 'block';
             svgEl.style.maxWidth = '100%';
           }

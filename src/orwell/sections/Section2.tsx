@@ -32,11 +32,16 @@ const Section2 = forwardRef<Section2Handle>(function Section2(_, ref) {
 
   const animateTextIn = () => {
     initSplitText();
-    gsap.to('.s2-sw', { y: 0, duration: 0.7, stagger: 0.04, ease: 'power3.out', delay: 0.2 });
+    const targets = document.querySelectorAll<HTMLElement>('.s2-sw');
+    if (!targets.length) return;
+
+    gsap.to(targets, { y: 0, duration: 0.7, stagger: 0.04, ease: 'power3.out', delay: 0.2 });
   };
 
   const animateTextOut = () => {
-    gsap.set('.s2-sw', { y: '110%' });
+    const targets = document.querySelectorAll<HTMLElement>('.s2-sw');
+    if (!targets.length) return;
+    gsap.set(targets, { y: '110%' });
   };
 
   const drawPrisoners = () => {

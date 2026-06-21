@@ -50,6 +50,11 @@ export default function OrwellApp() {
   const onLoaderHidden = useCallback(() => {
     setLoaderVisible(false);
     setScrollEnabled(true);
+
+    // Ensure mobile scrolling isn't left locked by the loader.
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+
     heroRef.current?.animateHandIn();
   }, []);
 
@@ -77,6 +82,14 @@ export default function OrwellApp() {
   );
 
   useOrwellScroll(scrollEnabled, scrollRefs, scrollCallbacks);
+
+  useEffect(() => {
+    // When scrolling is enabled, explicitly allow overflow again (mobile safari/chrome sometimes keeps it locked).
+    if (scrollEnabled) {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+  }, [scrollEnabled]);
 
   useEffect(() => {
     const syncSpacer = () => setScrollSpacerVh(getScrollBounds(isMobileViewport()).bodyVh);
