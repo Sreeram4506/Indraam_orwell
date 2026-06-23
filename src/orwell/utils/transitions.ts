@@ -8,14 +8,39 @@ export function isTransitionLocked() {
   return globalTransitionLock;
 }
 
+let releaseFallbackTimer: number | null = null;
+
 function lockScroll(lenisStop?: () => void) {
+  const isMobile = window.innerWidth <= 768 || window.matchMedia('(pointer: coarse)').matches;
+
   globalTransitionLock = true;
   lenisStop?.();
-  document.addEventListener('touchmove', preventTouch, { passive: false });
+
+  // On mobile/coarse pointers we must never preventDefault touchmove globally.
+  // Many mobile browsers will then appear "stuck" if a transition misses its release path.
+  if (!isMobile) {
+    document.addEventListener('touchmove', preventTouch, { passive: false });
+  }
+
+  // Safety net: if an animation target is missing or an onComplete never fires,
+  // we must not leave touch scrolling locked forever.
+  if (releaseFallbackTimer) window.clearTimeout(releaseFallbackTimer);
+  releaseFallbackTimer = window.setTimeout(() => {
+    globalTransitionLock = false;
+
+    document.removeEventListener('touchmove', preventTouch);
+    lenisStop?.(); // stop intent doesn't matter; best-effort
+    window.dispatchEvent(new Event('scroll'));
+    releaseFallbackTimer = null;
+  }, 1400);
 }
 
 function releaseLock(lenisStart?: () => void) {
   globalTransitionLock = false;
+  if (releaseFallbackTimer) {
+    window.clearTimeout(releaseFallbackTimer);
+    releaseFallbackTimer = null;
+  }
   document.removeEventListener('touchmove', preventTouch);
   lenisStart?.();
   window.dispatchEvent(new Event('scroll'));

@@ -3,10 +3,18 @@ import OrwellApp from './orwell/OrwellApp';
 import AdminContact from './sections/AdminContact';
 
 function App() {
-  const [pathname, setPathname] = useState(() => window.location.pathname);
+  const [pathname, setPathname] = useState(() => (typeof window !== 'undefined' ? window.location.pathname : '/'));
+  const [hash, setHash] = useState(() => (typeof window !== 'undefined' ? window.location.hash : ''));
 
   useEffect(() => {
-    const syncRoute = () => setPathname(window.location.pathname);
+    if (typeof window === 'undefined') return;
+
+    const syncRoute = () => {
+      setPathname(window.location.pathname);
+      setHash(window.location.hash);
+    };
+
+    syncRoute();
     window.addEventListener('popstate', syncRoute);
     window.addEventListener('hashchange', syncRoute);
     return () => {
@@ -15,7 +23,7 @@ function App() {
     };
   }, []);
 
-  if (pathname === '/admin' || window.location.hash === '#admin') {
+  if (pathname === '/admin' || hash === '#admin') {
     return <AdminContact />;
   }
 
