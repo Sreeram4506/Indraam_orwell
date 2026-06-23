@@ -23,7 +23,8 @@ export default function OrwellApp() {
   const [heroVisible, setHeroVisible] = useState(true);
   const [s6Active, setS6Active] = useState(false);
   const [s6Tilt] = useState({ x: 0, z: 0 });
-  const [scrollSpacerVh, setScrollSpacerVh] = useState(() => getScrollBounds().bodyVh);
+  const [s6Velocity, setS6Velocity] = useState(0);
+  const [scrollSpacerVh, setScrollSpacerVh] = useState(() => getScrollBounds(isMobileViewport()).bodyVh);
 
   const handResolveRef = useRef<() => void>(() => {});
   const handLoadPromise = useMemo(
@@ -47,6 +48,14 @@ export default function OrwellApp() {
     handResolveRef.current();
   }, []);
 
+  const ensureRootVisible = useCallback(() => {
+    const root = document.querySelector<HTMLElement>('.orwell-root');
+    if (!root) return;
+    root.style.opacity = '';
+    root.style.visibility = '';
+    root.style.pointerEvents = '';
+  }, []);
+
   const onLoaderHidden = useCallback(() => {
     setLoaderVisible(false);
     setScrollEnabled(true);
@@ -54,13 +63,15 @@ export default function OrwellApp() {
     // Ensure mobile scrolling isn't left locked by the loader.
     document.body.style.overflow = '';
     document.documentElement.style.overflow = '';
+    ensureRootVisible();
 
     heroRef.current?.animateHandIn();
-  }, []);
+  }, [ensureRootVisible]);
 
   const scrollCallbacks = useMemo(
     () => ({
       onS6Active: (active: boolean) => setS6Active(active),
+      onS6Velocity: setS6Velocity,
       onGrainOpacity: setGrainOpacity,
       onHeroVisible: setHeroVisible,
     }),
@@ -88,14 +99,19 @@ export default function OrwellApp() {
     if (scrollEnabled) {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
+      ensureRootVisible();
     }
-  }, [scrollEnabled]);
+  }, [scrollEnabled, ensureRootVisible]);
 
   useEffect(() => {
     const syncSpacer = () => setScrollSpacerVh(getScrollBounds(isMobileViewport()).bodyVh);
     syncSpacer();
     window.addEventListener('resize', syncSpacer);
-    return () => window.removeEventListener('resize', syncSpacer);
+    window.addEventListener('orientationchange', syncSpacer);
+    return () => {
+      window.removeEventListener('resize', syncSpacer);
+      window.removeEventListener('orientationchange', syncSpacer);
+    };
   }, [scrollEnabled]);
 
   useEffect(() => {
@@ -126,14 +142,21 @@ export default function OrwellApp() {
       <Section6
         ref={s6Ref}
         active={s6Active}
-        velocity={0}
+        velocity={s6Velocity}
         tiltX={s6Tilt.x}
         tiltZ={s6Tilt.z}
       />
       <Section7 ref={s7Ref} />
       <Section8 ref={s8Ref} />
       <Section9 ref={s9Ref} />
-      <div style={{ height: `${scrollSpacerVh}vh`, pointerEvents: 'none' }} aria-hidden />
+      <div
+        style={{
+          height: `${scrollSpacerVh}vh`,
+          pointerEvents: 'none',
+          flexShrink: 0,
+        }}
+        aria-hidden
+      />
       {!loaderVisible ? <Contact /> : null}
       {!loaderVisible && showAdmin ? <AdminContact /> : null}
     </div>

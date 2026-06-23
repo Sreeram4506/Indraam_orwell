@@ -79,7 +79,7 @@ const Section7 = forwardRef<Section7Handle>(function Section7(_, ref) {
       x: offset.x,
       y: offset.y,
       rotation: s7Rotations[i],
-      duration: isMobileViewport() ? 0.65 : 0.9,
+      duration: isMobileViewport() ? 0.45 : 0.9,
       ease: 'back.out(1.15)',
       onComplete: () => {
         if (i === S7_COUNT - 1) {
@@ -102,7 +102,7 @@ const Section7 = forwardRef<Section7Handle>(function Section7(_, ref) {
   const scheduleAutoPlay = () => {
     clearAutoPlay();
     const mobile = isMobileViewport();
-    const stagger = mobile ? 280 : 380;
+    const stagger = mobile ? 180 : 380;
 
     autoPlayTimersRef.current.push(
       window.setTimeout(() => {
@@ -111,7 +111,7 @@ const Section7 = forwardRef<Section7Handle>(function Section7(_, ref) {
             window.setTimeout(() => triggerCard(i), i * stagger),
           );
         }
-      }, mobile ? 180 : 320),
+      }, mobile ? 120 : 320),
     );
   };
 
@@ -158,9 +158,10 @@ const Section7 = forwardRef<Section7Handle>(function Section7(_, ref) {
     sectionRef.current.style.background = `rgb(${r},0,0)`;
 
     const divisor = isMobileViewport() ? S7_COUNT + 2 : S7_COUNT + 1;
+    const mobileProgressBoost = isMobileViewport() ? 0.12 : 0;
     for (let i = 0; i < S7_COUNT; i++) {
-      const thresh = i / divisor;
-      if (!triggeredRef.current[i] && p > thresh) {
+      const thresh = i / divisor - mobileProgressBoost;
+      if (!triggeredRef.current[i] && p > Math.max(0, thresh)) {
         triggerCard(i);
       }
     }
@@ -242,7 +243,7 @@ const Section7 = forwardRef<Section7Handle>(function Section7(_, ref) {
         zIndex: 49,
         overflow: 'hidden',
         perspective: 1200,
-        touchAction: 'pan-y',
+        touchAction: 'auto',
       }}
     >
       <div ref={spotlightRef} id="s7-spotlight" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 25 }} />

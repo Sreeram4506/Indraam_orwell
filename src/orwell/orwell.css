@@ -14,7 +14,7 @@
 .orwell-root html {
   overflow-x: hidden;
   scrollbar-width: none;
-  touch-action: pan-y;
+  touch-action: auto;
 }
 
 .orwell-root::-webkit-scrollbar,
@@ -24,7 +24,7 @@
 
 .orwell-root {
   position: relative;
-  min-height: 100vh;
+  min-height: 100%;
   background: #000;
   isolation: isolate;
   cursor: none;
@@ -56,6 +56,7 @@
   z-index: 52;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   background-image:
     url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E"),
     linear-gradient(160deg, #f0ebe0 0%, #e8e0d0 45%, #f5f0e8 100%);
@@ -661,116 +662,6 @@
   opacity: 0;
 }
 
-@media (max-width: 1024px) {
-  .orwell-root #hero-canvas { pointer-events: none; }
-  .orwell-root .newspaper-left { padding: 40px 24px !important; }
-  .orwell-root #s4-woman { width: 55% !important; }
-  .orwell-root #s6-left,
-  .orwell-root #s6-right { width: 20% !important; }
-  .orwell-root #s7-cards-wrapper { width: 260px !important; height: 360px !important; }
-}
-
 @media (max-width: 768px) {
   .orwell-root #cursor-text { display: none !important; }
-  .orwell-root .corner {
-    font-size: clamp(7px, 2.2vw, 12px) !important;
-    letter-spacing: 1px;
-  }
-  .orwell-root #section-2 {
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    padding: 15% 6% !important;
-    gap: 24px;
-  }
-  .orwell-root #s2-prisoners { width: 75% !important; }
-  .orwell-root #s2-quote { width: 90% !important; }
-  .orwell-root #s2-eye {
-    width: 70px !important;
-    height: 70px !important;
-    top: 3% !important;
-  }
-  .orwell-root #s2-eye > div {
-    width: 30px !important;
-    height: 30px !important;
-  }
-  .orwell-root #section-3-inner {
-    flex-direction: column !important;
-    overflow: hidden !important;
-  }
-  .orwell-root .newspaper-left {
-    width: 100% !important;
-    padding: 10px 14px !important;
-    border-right: none !important;
-    border-bottom: 2px solid #1a1a1a;
-    flex: 1 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    justify-content: space-between !important;
-  }
-  .orwell-root #s3-photo-wrap {
-    width: 100% !important;
-    height: 44vh !important;
-    flex-shrink: 0 !important;
-  }
-  .orwell-root #s3-headline {
-    font-size: clamp(22px, 6vw, 36px) !important;
-    margin-bottom: 6px !important;
-    line-height: 0.88 !important;
-  }
-  .orwell-root #s4-woman { width: 80% !important; }
-  .orwell-root #s6-left {
-    width: 28% !important;
-    left: 1% !important;
-  }
-  .orwell-root #s6-right {
-    width: 28% !important;
-    right: 1% !important;
-  }
-  .orwell-root #s7-cards-wrapper,
-  .orwell-root .s7-cards-wrapper {
-    width: min(88vw, 280px) !important;
-    height: min(118vw, 380px) !important;
-  }
-  .orwell-root #s7-math,
-  .orwell-root .s7-math {
-    font-size: clamp(34px, 10vw, 58px) !important;
-    letter-spacing: 4px !important;
-    line-height: 1 !important;
-    text-align: center !important;
-    transform: translate(-50%, -50%) scale(3) !important;
-  }
-  .orwell-root #s7-expertise-label,
-  .orwell-root .s7-expertise-label {
-    top: 7% !important;
-    font-size: clamp(20px, 5.5vw, 30px) !important;
-    letter-spacing: clamp(4px, 1vw, 8px) !important;
-  }
-  .orwell-root .s7-mobile-hint {
-    display: block;
-  }
-  .orwell-root .expertise-card-inner {
-    padding: clamp(14px, 3.5vw, 22px) !important;
-  }
-  .orwell-root .expertise-card-num {
-    font-size: clamp(40px, 11vw, 64px) !important;
-  }
-  .orwell-root .expertise-card-title {
-    font-size: clamp(16px, 4.2vw, 22px) !important;
-    max-width: 100% !important;
-    line-height: 1.1 !important;
-  }
-  .orwell-root .s7-section {
-    touch-action: pan-y;
-  }
-  .orwell-root .contact-grid {
-    grid-template-columns: 1fr !important;
-  }
-  .orwell-root .contact-form-grid {
-    grid-template-columns: 1fr !important;
-  }
-  .orwell-root .contact-footer {
-    flex-direction: column;
-    text-align: center;
-  }
 }

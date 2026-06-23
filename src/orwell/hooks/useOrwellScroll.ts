@@ -1,3 +1,4 @@
+import type { RefObject } from 'react';
 import { useEffect, useRef } from 'react';
 import Lenis from 'lenis';
 import {
@@ -19,18 +20,19 @@ import type { Section8Handle } from '../sections/Section8';
 import type { Section9Handle } from '../sections/Section9';
 
 type ScrollRefs = {
-  hero: React.RefObject<HeroSceneHandle | null>;
-  s2: React.RefObject<Section2Handle | null>;
-  s3: React.RefObject<Section3Handle | null>;
-  s4: React.RefObject<Section4Handle | null>;
-  s6: React.RefObject<Section6Handle | null>;
-  s7: React.RefObject<Section7Handle | null>;
-  s8: React.RefObject<Section8Handle | null>;
-  s9: React.RefObject<Section9Handle | null>;
+  hero: RefObject<HeroSceneHandle | null>;
+  s2: RefObject<Section2Handle | null>;
+  s3: RefObject<Section3Handle | null>;
+  s4: RefObject<Section4Handle | null>;
+  s6: RefObject<Section6Handle | null>;
+  s7: RefObject<Section7Handle | null>;
+  s8: RefObject<Section8Handle | null>;
+  s9: RefObject<Section9Handle | null>;
 };
 
 type ScrollCallbacks = {
   onS6Active: (active: boolean) => void;
+  onS6Velocity: (velocity: number) => void;
   onGrainOpacity: (opacity: number) => void;
   onHeroVisible: (visible: boolean) => void;
 };
@@ -41,7 +43,7 @@ export function useOrwellScroll(
   callbacks: ScrollCallbacks,
 ) {
   const { hero, s2, s3, s4, s6, s7, s8, s9 } = refs;
-  const { onS6Active, onGrainOpacity, onHeroVisible } = callbacks;
+  const { onS6Active, onS6Velocity, onGrainOpacity, onHeroVisible } = callbacks;
 
   const stateRef = useRef({
     section2Shown: false,
@@ -63,7 +65,8 @@ export function useOrwellScroll(
 
     const isMobile = isMobileViewport();
     const bounds = getScrollBounds(isMobile);
-    document.body.style.height = `${bounds.bodyVh}vh`;
+    // On mobile we removed swipe-to-snap, so keep native/continuous scrolling.
+    // Do not force an artificial body height.
 
     const show = (el: HTMLElement | null) => {
       if (!el) return;
@@ -89,10 +92,45 @@ export function useOrwellScroll(
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
       const progress = maxScroll > 0 ? window.scrollY / maxScroll : 0;
 
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug('[orwell scroll]', {
+          y: window.scrollY,
+          maxScroll,
+          progress,
+          innerHeight: window.innerHeight,
+          docScrollHeight: document.documentElement.scrollHeight,
+          boundaries: {
+            b12: bounds.boundary12,
+            b23: bounds.boundary23,
+            b34: bounds.boundary34,
+            b46: bounds.boundary46,
+            b67: bounds.boundary67,
+            b78: bounds.boundary78,
+            b89: bounds.boundary89,
+            reverseS7: bounds.reverseS7,
+            reverseS8: bounds.reverseS8,
+            reverseS9: bounds.reverseS9,
+          },
+          shown: {
+            hero: state.heroShown,
+            s2: state.section2Shown,
+            s3: state.section3Shown,
+            s4: state.section4Shown,
+            s6: state.section6Shown,
+            s7: state.section7Shown,
+            s8: state.section8Shown,
+            s9: state.section9Shown,
+          },
+          isMobile,
+        });
+      }
+
       if (state.section6Shown) {
         state.s6Velocity = Math.min(Math.abs(window.scrollY - state.s6LastScrollY) / 20, 3);
       }
       state.s6LastScrollY = window.scrollY;
+      onS6Velocity(state.s6Velocity);
 
       const canvas = hero.current?.canvas ?? null;
       const s2Handle = s2.current;
@@ -107,6 +145,23 @@ export function useOrwellScroll(
         state.section2Shown = true;
         state.heroShown = false;
         onHeroVisible(false);
+
+        if (isMobile) {
+          runElTransition(
+            canvas?.parentElement ?? null,
+            s2Handle?.el ?? null,
+            () => {
+              show(s2Handle?.el ?? null);
+              onGrainOpacity(0.12);
+              s2Handle?.drawPrisoners();
+              s2Handle?.animateTextIn();
+            },
+            true,
+            lenisApi,
+          );
+          return;
+        }
+
         glitchTransition(
           canvas,
           () => {
@@ -289,6 +344,24 @@ export function useOrwellScroll(
         state.heroShown = true;
         state.section2Shown = false;
         onHeroVisible(true);
+
+        if (isMobile) {
+          runElTransition(
+            s2Handle?.el ?? null,
+            canvas?.parentElement ?? null,
+            () => {
+              hide(s2Handle?.el ?? null);
+              onGrainOpacity(0);
+              s2Handle?.animateTextOut();
+              s2Handle?.resetPrisoners();
+              if (canvas) canvas.style.visibility = 'visible';
+            },
+            true,
+            lenisApi,
+          );
+          return;
+        }
+
         glitchTransitionReverse(
           canvas,
           s2Handle?.el ?? null,
@@ -307,167 +380,44 @@ export function useOrwellScroll(
       const lenis = new Lenis({ lerp: 0.1 });
       lenisRef.current = lenis;
 
+      let rafId: number | null = null;
       const raf = (time: number) => {
         lenis.raf(time);
-        requestAnimationFrame(raf);
+        rafId = requestAnimationFrame(raf);
       };
-      requestAnimationFrame(raf);
+      rafId = requestAnimationFrame(raf);
 
+      // Lenis handles smooth scrolling; we only need a single native scroll listener
+      // for progress-based transitions.
       window.addEventListener('scroll', onScroll, { passive: true });
       onScroll();
 
       return () => {
         window.removeEventListener('scroll', onScroll);
+        if (rafId != null) cancelAnimationFrame(rafId);
         lenis.destroy();
         lenisRef.current = null;
         document.body.style.height = '';
       };
     }
 
-    // Mobile swipe-to-snap: disable free touch scrolling and use swipes to jump between section boundaries.
-    let currentSectionIndex = 0; // 0=hero,1=s2,2=s3,3=s4,4=s6,5=s7,6=s8,7=s9
+    // Mobile: keep normal continuous scrolling (no swipe-to-snap),
+    // but we still must provide scroll room for progress-based transitions.
+    // Safety net: remove any Lenis classes that might have been added globally.
+    document.documentElement.classList.remove('lenis', 'lenis-smooth', 'lenis-stopped');
 
-    const targetsProgress = [
-      0,
-      bounds.boundary12 + 0.01,
-      bounds.boundary23 + 0.01,
-      bounds.boundary34 + 0.01,
-      bounds.boundary46 + 0.01,
-      bounds.boundary67 + 0.01,
-      bounds.boundary78 + 0.01,
-      bounds.boundary89 + 0.01,
-    ];
+    // IMPORTANT: Don't set body height on mobile; OrwellApp's spacer div provides scroll height.
+    // document.body.style.height = `${bounds.bodyVh}vh`;
 
-    // When navigating via hash (e.g. #contact), the swipe-snap system can fight the target scroll.
-    // Temporarily suspend snap behavior while we perform a deterministic jump to the element.
-    let ignoreSnapUntil = 0;
-
-    const jumpToContactIfNeeded = () => {
-      if (window.location.hash !== '#contact') return;
-      const el = document.getElementById('contact');
-      if (!el) return;
-
-      ignoreSnapUntil = Date.now() + 900;
-
-      const rect = el.getBoundingClientRect();
-      const top = rect.top + window.scrollY;
-
-      // Account for fixed nav height (~56-64px).
-      const headerOffset = 72;
-      const nextTop = Math.max(0, Math.round(top - headerOffset));
-      window.scrollTo({ top: nextTop, behavior: 'auto' });
-
-      // Keep internal state in sync with the actual scroll position.
-      onScroll();
-    };
-
-    const maxScroll = () => document.documentElement.scrollHeight - window.innerHeight;
-
-    const smoothScrollToTop = (targetTop: number, durationMs = 260) => {
-      const startTop = window.scrollY;
-      const diff = targetTop - startTop;
-      if (Math.abs(diff) < 2) {
-        window.scrollTo({ top: targetTop, behavior: 'auto' });
-        return;
-      }
-
-      const start = performance.now();
-      const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-      const step = (now: number) => {
-        const elapsed = now - start;
-        const t = Math.min(1, elapsed / durationMs);
-        const eased = easeOutCubic(t);
-        const nextTop = Math.round(startTop + diff * eased);
-
-        window.scrollTo({ top: nextTop, behavior: 'auto' });
-
-        if (t < 1) {
-          requestAnimationFrame(step);
-        } else {
-          onScroll();
-        }
-      };
-
-      requestAnimationFrame(step);
-    };
-
-    const setByIndex = (idx: number) => {
-      const clamped = Math.max(0, Math.min(targetsProgress.length - 1, idx));
-      currentSectionIndex = clamped;
-
-      const m = maxScroll();
-      if (m <= 0) return;
-
-      const targetP = targetsProgress[clamped] ?? 0;
-      const top = Math.round(Math.max(0, Math.min(1, targetP)) * m);
-
-      smoothScrollToTop(top);
-    };
-
-    let touchStartY = 0;
-    let touchStartX = 0;
-    let snapArmed = true;
-
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return;
-      snapArmed = true;
-      touchStartY = e.touches[0].clientY;
-      touchStartX = e.touches[0].clientX;
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!snapArmed) return;
-
-      // If we just jumped to #contact, don't immediately trigger/snap further.
-      if (Date.now() < ignoreSnapUntil) return;
-
-      // Some events are not cancelable (e.g. browser reports scrolling in progress),
-      // so guard to avoid "cancelable=false" warnings.
-      if (e.cancelable) e.preventDefault();
-    };
-
-    const onTouchEnd = (e: TouchEvent) => {
-      if (!snapArmed) return;
-      if (isTransitionLocked()) return;
-
-      if (Date.now() < ignoreSnapUntil) return;
-
-      const t = e.changedTouches[0];
-      const dy = t.clientY - touchStartY;
-      const dx = t.clientX - touchStartX;
-
-      if (Math.abs(dx) > Math.abs(dy)) return; // ignore horizontal
-
-      const threshold = 45;
-      if (Math.abs(dy) < threshold) return;
-
-      snapArmed = false;
-
-      if (dy < 0) setByIndex(currentSectionIndex + 1);
-      else setByIndex(currentSectionIndex - 1);
-    };
-
-    const opts = { passive: false } as AddEventListenerOptions;
-    window.addEventListener('touchstart', onTouchStart, opts);
-    window.addEventListener('touchmove', onTouchMove, opts);
-    window.addEventListener('touchend', onTouchEnd, opts);
-
-    // Initialize to current scroll position (first call).
+    // Still run transitions on scroll so section animations respond as the user scrolls.
+    window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
 
-    // If the user arrived/changed hash to #contact, jump now.
-    // Use a microtask + timer to ensure Contact section is mounted.
-    jumpToContactIfNeeded();
-    setTimeout(jumpToContactIfNeeded, 0);
-
     return () => {
-      window.removeEventListener('touchstart', onTouchStart as any);
-      window.removeEventListener('touchmove', onTouchMove as any);
-      window.removeEventListener('touchend', onTouchEnd as any);
-      document.body.style.height = '';
+      window.removeEventListener('scroll', onScroll);
+      // document.body.style.height = '';
     };
-  }, [enabled, hero, s2, s3, s4, s6, s7, s8, s9, onGrainOpacity, onHeroVisible, onS6Active]);
+  }, [enabled, hero, s2, s3, s4, s6, s7, s8, s9, onGrainOpacity, onHeroVisible, onS6Active, onS6Velocity]);
 }
 
 export function useS6Velocity(enabled: boolean) {

@@ -11,7 +11,8 @@ export function useInlineSvg(url: string) {
       .then((svg) => {
         if (cancelled || !containerRef.current) return;
 
-        containerRef.current.innerHTML = svg;
+        // Some source SVGs ship with height="auto", which browsers reject on inline SVG.
+        containerRef.current.innerHTML = svg.replace(/\sheight="auto"/gi, '');
 
         const svgEl = containerRef.current.querySelector('svg');
         if (!svgEl) return;

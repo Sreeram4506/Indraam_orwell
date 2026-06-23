@@ -78,8 +78,11 @@
     overscroll-behavior: contain;
   }
 
-  .lenis.lenis-stopped {
-    overflow: hidden;
+  /* Only prevent overflow on desktop when Lenis explicitly stops */
+  @media (min-width: 769px) {
+    .lenis.lenis-stopped {
+      overflow: hidden;
+    }
   }
 
   body {
@@ -93,7 +96,20 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
+    /* REMOVED: overscroll-behavior-y: contain; to avoid blocking scroll events on mobile */
+  }
+
+  /* Mobile: never block overflow */
+  @media (max-width: 768px) {
+    .lenis.lenis-stopped {
+      overflow: visible;
+    }
+
+    html.lenis,
+    html.lenis body {
+      overflow: visible !important;
+      height: auto !important;
+    }
   }
 
   @media (hover: hover) and (pointer: fine) {

@@ -17,7 +17,9 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
   useEffect(() => {
     history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
+    // Hard lock scrolling during loader, but always restore on any exit path.
     document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
 
     const isMob = window.innerWidth <= 768;
     let numIndex = 0;
@@ -26,11 +28,17 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
 
     const doHide = () => {
       const loaderEl = rootRef.current;
-      // Always restore overflow even if UI elements can't be found.
+
+      // Always restore overflow before leaving.
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
 
       if (!loaderEl) {
-        onHidden();
+        try {
+          onHidden();
+        } finally {
+          // no-op (overflow already restored)
+        }
         return;
       }
 
@@ -46,7 +54,11 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
       const ctx = glitch.getContext('2d');
       if (!ctx) {
         loaderEl.style.display = 'none';
-        onHidden();
+        try {
+          onHidden();
+        } finally {
+          // overflow already restored above in doHide
+        }
         return;
       }
 
@@ -93,7 +105,11 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
           window.setTimeout(() => {
             glitch.remove();
             loaderEl.style.display = 'none';
-            onHidden();
+            try {
+              onHidden();
+            } finally {
+              // overflow already restored above in doHide
+            }
           }, 55);
         }
       };
@@ -128,7 +144,7 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
       const animateIn = () => {
         setNumber(String(num));
         requestAnimationFrame(() => {
-          const spans = el.querySelectorAll('span');
+          const spans = Array.from(el.querySelectorAll('span'));
           gsap.set(spans, { clipPath: 'inset(100% 0 0% 0)', y: 60 });
           gsap.to(spans, {
             clipPath: 'inset(0% 0 0% 0)',
@@ -143,7 +159,7 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
 
       const existing = el.querySelectorAll('span');
       if (existing.length > 0) {
-        gsap.to(existing, {
+        gsap.to(Array.from(existing), {
           clipPath: 'inset(0 0 100% 0)',
           y: -40,
           duration: 0.4,
@@ -186,7 +202,9 @@ export default function OrwellLoader({ handLoadPromise, onHidden }: OrwellLoader
     animDoneRef.current = false;
 
     return () => {
+      // Ensure scrolling is restored if component unmounts during loader.
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     };
   }, [handLoadPromise, onHidden]);
 
